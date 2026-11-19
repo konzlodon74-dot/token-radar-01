@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launchscope — token launch radar</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="blip" aria-hidden="true"></span>
+    <div>
+      <h1>Launchscope</h1>
+      <p class="tag">Pre-token protocols, ranked by what a token would be worth if it traded the way their live peers do.</p>
+    </div>
+  </div>
+  <p class="meta">Snapshot <strong id="asof">…</strong> · <span id="source">…</span> · Model <strong>peer-1</strong> · Sealed data only, no live prices</p>
+</header>
+
+<main>
+  <section class="stats" id="stats" aria-label="Coverage"></section>
+
+  <nav class="tabs" aria-label="Views">
+    <button type="button" id="tabBoard" class="tab on">The board</button>
+    <button type="button" id="tabLive" class="tab">Already trading <span class="tabnote">the peer set, shown apart</span></button>
+  </nav>
+
+  <section id="boardView">
+    <form class="controls" id="controls" autocomplete="off">
+      <label class="grow">Search
+        <input type="search" id="q" placeholder="Name or slug, e.g. gauntlet">
+      </label>
+      <label>Category
+        <select id="cat"><option value="">All categories</option></select>
+      </label>
+      <label>Chain
+        <select id="chain"><option value="">All chains</option></select>
+      </label>
+      <label class="check"><input type="checkbox" id="watch"> Watchlist only</label>
+      <label class="check"><input type="checkbox" id="hideRisk"> Hide product-risk rows</label>
+      <button type="button" id="reset" class="ghost">Reset</button>
+    </form>
+    <p class="count" id="count" role="status"></p>
+    <div class="tablewrap">
+      <table id="board">
+        <thead><tr>
+          <th data-sort="rank" class="num">Rank</th>
+          <th data-sort="name">Protocol</th>
+          <th>Category</th>
+          <th>Chains</th>
+          <th data-sort="tvl" class="num">TVL</th>
+          <th data-sort="change" class="num">7d</th>
+          <th data-sort="age" class="num">Age</th>
+          <th data-sort="multiple" class="num">Peer &times;</th>
+          <th data-sort="implied" class="num">Implied value</th>
+          <th data-sort="score">Launch score</th>
+          <th>Flags</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="note">Rank is the model's claim, by implied value. Click a row for its pricing breakdown and farm plan. Sort by any column; the rank column always shows the board's own order.</p>
+  </section>
+
+  <section id="liveView" hidden>
+    <p class="lede">These protocols already have a token that trades, so the board never ranks them: it shows the
+    market's own value for them instead. They are the peer set that prices the board — each category's
+    implied values start from the median market value per TVL dollar of the protocols below.</p>
+    <div class="tablewrap">
+      <table id="live">
+        <thead><tr>
+          <th>Protocol</th><th>Category</th><th class="num">TVL</th><th class="num">Market cap</th>
+          <th class="num">Value / TVL</th><th class="num">7d</th>
+        </tr></thead>
+        <tbody id="liveRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="detailView" hidden></section>
+
+  <section class="method" id="method">
+    <h2>How this board is priced</h2>
+    <p>Every implied value is computed from the snapshot's own figures, by one formula applied to every row.
+    No protocol is priced by name.</p>
+    <p class="formula">implied value = TVL &times; peer multiple &times; momentum &times; track record &times; breadth</p>
+    <ul>
+      <li><strong>Peer multiple.</strong> Each live peer's market-cap / TVL ratio is first winsorised to
+      [0.01, 5], so a peer with a near-zero TVL cannot price a category. The category's median ratio is then
+      weighted n / (n + 4) against the all-market median
+      (<span id="globalMult">…</span> across <span id="globalPeers">…</span> live protocols here), so a category
+      needs a deep peer set before its own median prices the board, and every multiple is
+      clamped between 0.02 and 3. Each protocol's page shows its peer count and its category's raw median,
+      so a thin peer set is never hidden.</li>
+      <li><strong>Momentum.</strong> 1 + 0.35 &times; the 7-day TVL change, clamped between &minus;50% and +100%.
+      An unreported change is neutral and flagged, never invented.</li>
+      <li><strong>Track record.</strong> 0.78 + 0.34 &times; age / (age + 365 days), from the day DefiLlama began
+      tracking the protocol: the longer it has run with no token, the more of its record a buyer can see.
+      An unreported listing date scores as 150 days and is flagged.</li>
+      <li><strong>Breadth.</strong> 1 + 0.015 per extra chain, up to twelve: a token distributed across more
+      chains reaches more holders.</li>
+    </ul>
+    <p>The factors are rounded before they are multiplied, so the breakdown on each protocol's page reproduces
+    its board value to the dollar. The <strong>launch score</strong> (0–100) is a separate readiness gauge blending size,
+    track record, momentum and breadth; it sorts the page but never moves a rank.</p>
+    <h2>Who gets ranked</h2>
+    <p>The board covers every protocol on the snapshot's watchlist, then applies the watchlist's own product test
+    at every size: a candidate must record no token, and must not be an exchange, a bridge-balance entry
+    (DefiLlama's bridge rows are mostly balances of assets that already trade), a versioned pool of another
+    protocol, or a wrapped, staked or staking product of one. Rows in staking-like categories that survive the
+    test carry a product-risk flag instead of being silently dropped. A protocol is said to <em>record</em> no
+    token, never to <em>have</em> none: the snapshot is DefiLlama's record, and a record is not proof.</p>
+    <h2>Reading the flags</h2>
+    <p>Flags are warnings from the protocol's own record: a shrinking TVL, a parabolic week, a short track
+    record, a single chain, a small base, or a figure the snapshot does not report. A flagged row keeps its
+    rank; the flag is there so a farmer can price the risk the model cannot.</p>
+  </section>
+</main>
+
+<footer>
+  <p>An implied value is this radar's own claim about what a token would be worth if the protocol's record
+  stayed as it is. It is not a prediction that a token will be issued, and it is not make.fun's claim.
+  Farm plans are checklists, not financial advice; costs are estimates in US dollars.</p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
